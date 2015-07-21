@@ -10,51 +10,88 @@
     </head>
     <body>
     <!-- List of uploaded documents -->
-    {% if tracks %}
-        <ul>
-        {% for track in tracks %}
-            <li><a href="{{ track.track_file.url }}">{{ track.track_file.name }}</a></li>
-        {% endfor %}
-        </ul>
-    {% else %}
-        <p>No tracks.</p>
-    {% endif %}
+        {% if tracks %}
+            <ul>
+            {% for track in tracks %}
+                <li><a href="{{ track.track_file.url }}">{{ track.track_file.name }}</a></li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No tracks.</p>
+        {% endif %}
 
-    <form action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <p>{{ form.non_field_errors }}</p>
-        <p>{{ form.docfile.label_tag }} {{ form.docfile.help_text }}</p>
-        <p>
-            {{ form.docfile.errors }}
-            {{ form.docfile }}
-        </p>
-        <input type="file" name="track_file" />
-        <p><input type="submit" value="Upload" /></p>
-        <audio controls id="track" src="/media/tracks/sample.wav" hidden>
-    </form>
+        {% if hasFile %}
+            <p>The file you tried to upload already exists</p>
+        {% endif %}
+
+        <form action="{% url 'index' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <input type="file" name="track_file" />
+            <p><input type="submit" value="Upload" /></p>
+        </form>
+        {% if track_name %}
+            <audio controls id="track" src="/media/{{track_name}}" hidden></audio>
+        {% endif %}
+        <button id="play" class="btn btn-primary">Play!</button>
+        <p id="time"></p>
     </body>
     <script type="text/javascript">
         var audio = document.getElementById('track');
+        var timestamps=JSON.parse("{{timestamps}}");
+        var playing = false;
+        var currentIndex=0;
+        var userTimes = [];
+        var finished = false;
         function play(){
             $("#track").trigger('play');
+            playing=true;
         }
 
         function pause(){
-            $("#track").trigger('pause');   
+            $("#track").trigger('pause');  
+            playing=false; 
         }
 
         function stop(){
             pause();
-            $("#track").prop("currentTime",0);  
+            $("#track").prop("currentTime",0); 
+            playing=false; 
         }
 
         function getCurrentTime(){
             return audio.currentTime * 1000;
         }
 
+        function getClosestTime(time){
+            var min = Math.abs(timestamps[0] - time);
+            var minindex = 0;
+            for(var i = 1;i<timestamps.length;i++){
+                if(Math.abs(timestamps[i] - time) < min){
+                    minindex = i;
+                    min = Math.abs(timestamps[i] - time);
+                }
+            }
+            return minindex;
+        }
+
+        $(document).keypress(function(e) {
+            if(e.which == 32) {//on space press
+                if(!playing){
+                    play();
+                }else{
+                    var time=getCurrentTime();
+                    userTimes.push({time : time, idx: getClosestTime(time)});
+                    $("#time").text(time);
+                }
+            }
+        });
+
         $(document).ready(function(){
-            console.log("carregado");
-            //$("#track").trigger('play');
+            $("#track").bind('ended',function(){
+                finished = true;
+                playing = false;
+            });
         });
     </script>
 </html> 

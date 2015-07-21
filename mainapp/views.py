@@ -1,39 +1,58 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-
-# Create your views here.
-def index(request):
-    return HttpResponse("Hello, world. You're at the poll index.")
-
-
-
-from django.shortcuts import render_to_response
+from django.shortcuts import render,render_to_response
+from django.http import HttpResponse, HttpResponseRedirect
+from django.utils import simplejson
 from django.template import RequestContext
-from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
+from django.conf import settings
 
 from mainapp.models import Track
 from mainapp.forms import UploadTrackForm
 
-def upload_track(request):
+import os
+
+def toJson(mydict):
+    response = HttpResponse(simplejson.dumps(mydict), mimetype="application/json")
+    response['Access-Control-Allow-Origin'] = "*"
+    return response
+
+#returns list of floats
+def readTimes(track_name):
+    f = open(settings.TRACKER_ROOT + '/' + track_name + '.txt')
+    content = f.read()
+    content = content.split('\n')
+    content = content[:-1]
+    content = [float(i) for i in content]
+    content = [1000 * i for i in content]
+    content = [int(i) for i in content]
+    return content
+
+def index(request, track_id=0):
     # Handle file upload
+    hasFile = False
+    form = UploadTrackForm()
+    track_name=''
     if request.method == 'POST':
         form = UploadTrackForm(request.POST, request.FILES)
         if form.is_valid():
-            track = Track(track_file = request.FILES['track_file'], length=0)#TODO: change length
-            track.save()
-
-            # Redirect to the document list after POST
-            return HttpResponseRedirect(reverse('mainapp.views.upload_track'))
-    else:
-        form = UploadTrackForm() # A empty, unbound form
-
-    # Load documents for the list page
+            track_name = request.FILES['track_file'].name
+            if Track.objects.filter(track_file=request.FILES['track_file'].name).exists():
+                hasFile = True
+            else:#save file
+                track = Track(track_file = request.FILES['track_file'], length=0)
+                track.save()
+                command = "%s/aubiotrack %s/%s > %s/%s.txt" % (settings.TRACKER_ROOT, settings.MEDIA_ROOT, track_name, settings.TRACKER_ROOT, track_name)
+                os.system(command)
+                # Redirect to the track list after POST
+                return HttpResponseRedirect(reverse('mainapp.views.index'))
+    elif request.method == 'GET' and int(track_id) != 0:
+        track_name = Track.objects.get(id=int(track_id)).track_file.name
     tracks = Track.objects.all()
-    context = {'form' : form}
+    context = {'form' : form, 'hasFile' : hasFile}
     if tracks:
-    	context.update({'tracks' : tracks})
-    # Render list page with the documents and the form
+        context.update({'tracks' : tracks})
+    if track_name != '':
+        context.update({'timestamps' : readTimes(track_name), 'track_name' : track_name})
+    #dsadsads
     return render_to_response(
         'mainapp/list.html',
         context,

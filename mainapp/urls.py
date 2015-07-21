@@ -2,8 +2,8 @@ from django.conf.urls import patterns, url
 
 
 urlpatterns = patterns('mainapp.views',
-    url(r'^$', 'index', name='index'),
-    url(r'^upload/$', 'upload_track', name='upload'),
+    url(r'^index/(\d+)/$', 'index', name='index'),
+    url(r'^index/$', 'index', name='index'),
 )
 
 
