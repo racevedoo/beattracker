@@ -10,11 +10,6 @@ from mainapp.forms import UploadTrackForm
 
 import os
 
-def toJson(mydict):
-    response = HttpResponse(simplejson.dumps(mydict), mimetype="application/json")
-    response['Access-Control-Allow-Origin'] = "*"
-    return response
-
 #returns list of floats
 def readTimes(track_name):
     f = open(settings.TRACKER_ROOT + '/' + track_name + '.txt')
