@@ -21,7 +21,7 @@ def readTimes(track_name):
     content = [int(i) for i in content]
     return content
 
-def index(request, track_id=0):
+def index(request, track_id=0, level=0):
     # Handle file upload
     hasFile = False
     form = UploadTrackForm()
@@ -47,6 +47,11 @@ def index(request, track_id=0):
         context.update({'tracks' : tracks})
     if track_name != '':
         context.update({'timestamps' : readTimes(track_name), 'track_name' : track_name})
+    if 0 != int(level):
+        hard = int(level) == 3
+        context.update({'level' : int(level)})
+        if hard:
+            context.update({'hard' : hard})
     #dsadsads
     return render_to_response(
         'mainapp/list.html',
